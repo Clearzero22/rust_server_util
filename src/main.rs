@@ -3,9 +3,10 @@ use std::{
         mpsc::{self, Receiver},
         Arc, Mutex,
     },
-    thread,
-    time::SystemTime,
+    thread
 };
+
+use chrono::Utc;
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -39,7 +40,10 @@ impl ThreadPool {
             let receiver = receiver.clone();
             workers.push(Worker::new(id, receiver));
         }
-        ThreadPool { workers, sender: Some(sender) }
+        ThreadPool {
+            workers,
+            sender: Some(sender),
+        }
     }
 
     //实现execute方法
@@ -61,20 +65,18 @@ impl Drop for ThreadPool {
         drop(self.sender.take());
         // 等待线程结束
         for worker in &mut self.workers {
-            let time = SystemTime::now();
+            let now = Utc::now();
+            let formatted_time = now.format("%y-%m-%d").to_string();
             if let Some(thread) = worker.handle.take() {
                 thread.join().unwrap();
-                println!(
-                    "Worker {} shutdown in {:?}",
-                    worker.id,
-                    time.elapsed().unwrap()
-                );
+                println!("Worker {} shutdown in {}", worker.id, formatted_time);
             }
-            println!("{:?}Shutting down worker {}", time, worker.id);
+            println!("{}Shutting down worker {}", formatted_time, worker.id);
         }
         // println!("Shutting down all workers");
-        let time = SystemTime::now();
-        println!("{:?}Shutting down thread pool", time);
+        let nextnow = Utc::now();
+        let formatted_time = nextnow.format("%y-%m-%d").to_string();
+        println!("{}Shutting down thread pool", formatted_time);
     }
 }
 
@@ -106,7 +108,10 @@ impl Worker {
             }
         });
 
-        Worker { id, handle:Some(handle) }
+        Worker {
+            id,
+            handle: Some(handle),
+        }
     }
 }
 
